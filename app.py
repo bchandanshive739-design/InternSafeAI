@@ -1,7 +1,9 @@
 from flask import Flask, request, jsonify, render_template_string
+import os
+import joblib
 
 app = Flask(__name__)
-
+model = joblib.load("internship_model.pkl")
 HTML = """
 <!DOCTYPE html>
 <html>
@@ -133,6 +135,7 @@ HTML = """
         <p id="companyResult"></p>
         <div class="score" id="score"></div>
         <h3 id="verdict"></h3>
+        <p id="mlPrediction"></p>
         <div id="warnings"></div>
         <p id="message"></p>
     </div>
@@ -188,6 +191,9 @@ async function(event) {
         document.getElementById("message").textContent =
             result.message;
 
+       document.getElementById("mlPrediction").textContent =
+    "ML Prediction: " + (result.ml_prediction ?? "Not available");
+
         document.getElementById("result").scrollIntoView({
             behavior: "smooth"
         });
@@ -219,11 +225,14 @@ def analyze():
         }), 400
 
     text = description.lower()
+    ml_prediction = model.predict([description])[0]
+    print("ML Prediction:", ml_prediction)
+    ml_label = "Suspicious" if int(ml_prediction) == 1 else "Less Suspicious"
     score = 0
     flags = []
 
     suspicious = [
-        "registration fee",
+        "registration fee"
         "security deposit",
         "guaranteed selection",
         "no interview",
@@ -282,12 +291,13 @@ def analyze():
 
     return jsonify({
         "company": company,
+        "ml_prediction": ml_label,
         "risk_score": score,
         "verdict": verdict,
         "flags": flags,
         "message": (
-            "This is a basic rule-based prototype, not a verified "
-            "AI prediction. Check the company independently."
+            "ML prediction and rule-based risk assessment."
+            "Check the company independently."
         )
     })
 
